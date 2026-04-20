@@ -1,24 +1,38 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 
-export default function LeadsList({ leads, user }) {
-  const [statusMap, setStatusMap] = useState({});
-  const [favorites, setFavorites] = useState(() => {
-    return JSON.parse(localStorage.getItem("favorites")) || [];
+type Lead = {
+  name: string;
+  status: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+};
+
+type LeadsListProps = {
+  leads: Lead[];
+  user?: string;
+};
+
+export default function LeadsList({ leads, user }: LeadsListProps) {
+  const [statusMap, setStatusMap] = useState<Record<string, string>>({});
+  const [favorites, setFavorites] = useState<Lead[]>(() => {
+    const data = localStorage.getItem("favorites");
+    return data ? JSON.parse(data) : [];
   });
 
-  const atualizarStatus = (leadName, status) => {
+  const atualizarStatus = (leadName: string, status: string) => {
     setStatusMap((prev) => ({
       ...prev,
       [leadName]: status,
     }));
   };
 
-  const toggleFavorite = (lead) => {
+  const toggleFavorite = (lead: lead) => {
     let updated;
 
-    if (favorites.find((f) => f.name === lead.name)) {
-      updated = favorites.filter((f) => f.name !== lead.name);
+    if (favorites.find((f: Lead) => f.name === lead.name)) {
+      updated = favorites.filter((f: Lead) => f.name !== lead.name);
     } else {
       updated = [...favorites, lead];
     }
@@ -27,7 +41,7 @@ export default function LeadsList({ leads, user }) {
     localStorage.setItem("favorites", JSON.stringify(updated));
   };
 
-  const formatPhone = (phone) => {
+  const formatPhone = (phone: string) => {
     if (!phone) return "";
 
     let cleaned = phone.replace(/\D/g, "");
@@ -41,8 +55,7 @@ export default function LeadsList({ leads, user }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 py-10">
-      {leads.map((lead) => {
-
+      {leads.map((lead: Lead) => {
         return (
           <div
             key={lead.name}
