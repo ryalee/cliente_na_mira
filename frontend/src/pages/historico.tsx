@@ -1,29 +1,34 @@
 import { useEffect, useState } from "react";
 import Header from "../components/Header";
+import { useUser } from "@clerk/clerk-react";
+import type { SearchHistoryRow } from "../lib/searchStorage";
+
+type GroupsMap = Record<string, SearchHistoryRow[]>;
 
 export default function Historico() {
-  const [groups, setGroups] = useState({});
-
-  const agruparPorCategoria = (history) => {
-    return history.reduce((acc, item) => {
-      const categoria = item.query.split(" em ")[0].toLowerCase();
-
-      if (!acc[categoria]) {
-        acc[categoria] = [];
-      }
-
-      acc[categoria].push(item);
-
-      return acc;
-    }, {});
-  };
+  const { user } = useUser();
+  const [groups, setGroups] = useState<GroupsMap>({});
 
   useEffect(() => {
-    const history = JSON.parse(localStorage.getItem("searchHistory")) || [];
+    const run = async () => {
+      if (!user?.id) return;
+      try {
+        const { getSearchHistoryGroups } = await import("../lib/searchStorage");
+        const grouped = await getSearchHistoryGroups(user.id);
 
-    const grouped = agruparPorCategoria(history);
-    setGroups(grouped);
-  }, []);
+        const map: GroupsMap = {};
+        for (const g of grouped) {
+          map[g.categoria] = g.items;
+        }
+
+        setGroups(map);
+      } catch (e) {
+        console.error("Erro ao carregar histórico:", e);
+      }
+    };
+
+    run();
+  }, [user?.id]);
 
   return (
     <>
@@ -42,20 +47,42 @@ export default function Historico() {
                   key={item.id}
                   className="min-w-62.5 bg-[#1a1a1a] p-4 rounded-xl border border-white/10 hover:scale-105 transition cursor-pointer"
                   onClick={() => {
-                    localStorage.setItem(
-                      "lastSearch",
-                      JSON.stringify(item.leads),
-                    );
+                    // gravar no cache local compatível com o Home
+                    try {
+                      const queryStr = item.query;
+                      // const [q, loc] = queryStr.split(" em ");
+
+                      // Home vai ler lastSearchCache:v1:${user.id}
+                      localStorage.setItem(
+                        `lastSearchCache:${user?.id}:${"v1"}`,
+                        JSON.stringify({
+                          query: item.query,
+                          leads: item.leads_json,
+                          updatedAt: Date.now(),
+                        }),
+                      );
+
+                      // opcional: melhora a chance do usuário já ver campos preenchidos ao voltar
+                      localStorage.setItem(
+                        `searchCache:${user?.id}:${"v1"}:${encodeURIComponent(queryStr)}`,
+                        JSON.stringify({ leads: item.leads_json }),
+                      );
+                    } catch {
+                      // ignore
+                    }
+
                     window.location.href = "/";
                   }}
                 >
                   <p className="text-sm text-white/50 mb-2">
-                    {new Date(item.createdAt).toLocaleDateString()}
+                    {new Date(item.created_at).toLocaleDateString()}
                   </p>
 
                   <h3 className="font-bold mb-2">{item.query}</h3>
 
-                  <p className="text-green-400">{item.leads.length} leads</p>
+                  <p className="text-green-400">
+                    {item.leads_json.length} leads
+                  </p>
                 </div>
               ))}
             </div>

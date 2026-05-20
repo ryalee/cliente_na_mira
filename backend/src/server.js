@@ -4,12 +4,25 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const { scrapeGoogleMaps } = require("./scraper");
-const { createClient } = require("@supabase/supabase-js");
+const fs = require("fs");
+const path = require("path");
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY,
-);
+const USER_PROFILES_PATH = path.join(__dirname, "../data/user_profiles.json");
+
+function readUserProfiles() {
+  try {
+    const raw = fs.readFileSync(USER_PROFILES_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeUserProfiles(store) {
+  fs.mkdirSync(path.dirname(USER_PROFILES_PATH), { recursive: true });
+  fs.writeFileSync(USER_PROFILES_PATH, JSON.stringify(store, null, 2), "utf8");
+}
 
 const app = express();
 app.use(cors());
@@ -64,27 +77,17 @@ app.get("/profile/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
 
-    let { data } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const store = readUserProfiles();
+    const existing = store[userId];
 
-    if (!data) {
-      const { data: newProfile, error } = await supabase
-        .from("user_profiles")
-        .insert([{ user_id: userId, plan: "free" }])
-        .select()
-        .single();
-
-      if (error) {
-        return res.status(500).json({ error: "Erro ao criar perfil" });
-      }
-
+    if (!existing) {
+      const newProfile = { user_id: userId, plan: "free" };
+      store[userId] = newProfile;
+      writeUserProfiles(store);
       return res.json(newProfile);
     }
 
-    res.json(data);
+    return res.json(existing);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erro no servidor" });

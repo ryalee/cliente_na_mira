@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useUser } from "@clerk/clerk-react";
 
-export default function OnboardingModal({ onClose }) {
+type Props = { onClose: () => void };
+
+export default function OnboardingModal({ onClose }: Props) {
   const { user } = useUser();
 
   const [profession, setProfession] = useState("");
@@ -14,6 +16,8 @@ export default function OnboardingModal({ onClose }) {
       alert("Preencha profissão e serviço");
       return;
     }
+
+    if (!user?.id) return;
 
     await fetch("http://localhost:3000/profile", {
       method: "POST",

@@ -1,14 +1,26 @@
 import { useEffect, useState } from "react";
 import LeadsList from "../components/LeadsList";
 import Header from "../components/Header";
+import { useUser } from "@clerk/clerk-react";
 
 export default function Favoritos() {
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const { user } = useUser();
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("favorites")) || [];
-    setFavorites(stored);
-  }, []);
+    const run = async () => {
+      if (!user?.id) return;
+      try {
+        const { getFavorites } = await import("../lib/searchStorage");
+        const data = await getFavorites(user.id);
+        setFavorites(data);
+      } catch (e) {
+        console.error("Erro ao carregar favoritos:", e);
+      }
+    };
+
+    run();
+  }, [user?.id]);
 
   return (
     <>

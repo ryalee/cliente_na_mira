@@ -48,14 +48,14 @@ export default function Login() {
       </div>
 
       {/* LADO DIREITO */}
-      <div className="flex w-full md:w-1/2 items-center justify-center bg-[#e9e9e9]">
+      <div className="flex w-full md:w-1/2 items-center justify-center bg-slate-50">
         <SignIn
           appearance={{
             elements: {
-              card: "bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl",
+              card: "bg-white/80 backdrop-blur border border-slate-200 rounded-2xl shadow-xl",
               formButtonPrimary:
                 "bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-90",
-              formFieldInput: "bg-zinc-800 text-white border border-zinc-700",
+              formFieldInput: "bg-white text-slate-900 border border-slate-200",
             },
           }}
         />

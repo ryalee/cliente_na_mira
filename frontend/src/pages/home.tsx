@@ -1,4 +1,4 @@
-import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
+import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import Header from "../components/Header";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
@@ -10,10 +10,10 @@ import OnboardingModal from "../components/OnboardingModal";
 export default function Home() {
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
-  const [leads, setLeads] = useState([]);
+  const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [logs, setLogs] = useState([]);
-  const { user, isLoaded } = useUser();
+  const [logs, setLogs] = useState<string[]>([]);
+  const { user } = useUser();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // 🧠 Onboarding
@@ -45,11 +45,33 @@ export default function Home() {
     };
   }, []);
 
-  // 💾 Última busca
+  // 💾 Última busca (local primeiro; depois Supabase)
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("lastSearch")) || [];
-    setLeads(saved);
-  }, []);
+    const run = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { getLastCachedSearchLeads } =
+          await import("../lib/searchStorage");
+
+        // 1) tenta renderizar rápido pelo cache local
+        const last = getLastCachedSearchLeads(user.id);
+        if (last?.leads?.length) {
+          setLeads(last.leads);
+          setQuery(last.query.split(" em ")[0] ?? "");
+          setLocation(last.query.split(" em ")[1] ?? "");
+        }
+
+        // 2) usa fonte local (histórico/caches)
+        const saved = await getLastCachedSearchLeads(user.id);
+        setLeads(saved?.leads ?? []);
+      } catch (e) {
+        console.error("Erro ao carregar última busca:", e);
+      }
+    };
+
+    run();
+  }, [user?.id]);
 
   // 🚀 Buscar leads
   const buscarLeads = async () => {
@@ -72,18 +94,16 @@ export default function Home() {
       const data = await response.json();
 
       setLeads(data);
-      localStorage.setItem("lastSearch", JSON.stringify(data));
 
-      const newSearch = {
-        id: Date.now(),
-        query: `${query} em ${location}`,
-        createdAt: new Date().toISOString(),
-        leads: data,
-      };
-
-      const history = JSON.parse(localStorage.getItem("searchHistory")) || [];
-      history.unshift(newSearch);
-      localStorage.setItem("searchHistory", JSON.stringify(history));
+      // salva no Supabase (histórico)
+      if (user?.id) {
+        const { upsertSearchHistory } = await import("../lib/searchStorage");
+        await upsertSearchHistory({
+          userId: user.id,
+          query: `${query} em ${location}`,
+          leads: data,
+        });
+      }
     } catch (err) {
       console.error("Erro ao buscar:", err);
     } finally {

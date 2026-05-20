@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 
 type Lead = {
@@ -11,15 +11,29 @@ type Lead = {
 
 type LeadsListProps = {
   leads: Lead[];
-  user?: string;
+  user?: { id?: string } | any;
 };
 
 export default function LeadsList({ leads, user }: LeadsListProps) {
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
-  const [favorites, setFavorites] = useState<Lead[]>(() => {
-    const data = localStorage.getItem("favorites");
-    return data ? JSON.parse(data) : [];
-  });
+  const [favorites, setFavorites] = useState<Lead[]>([]);
+
+  const userId = user?.id;
+
+  useEffect(() => {
+    const run = async () => {
+      if (!userId) return;
+      try {
+        const { getFavorites } = await import("../lib/searchStorage");
+        const data = await getFavorites(userId);
+        setFavorites(data);
+      } catch (e) {
+        console.error("Erro ao carregar favoritos:", e);
+      }
+    };
+
+    run();
+  }, [userId]);
 
   const atualizarStatus = (leadName: string, status: string) => {
     setStatusMap((prev) => ({
@@ -28,17 +42,25 @@ export default function LeadsList({ leads, user }: LeadsListProps) {
     }));
   };
 
-  const toggleFavorite = (lead: lead) => {
-    let updated;
+  const toggleFavorite = async (lead: Lead) => {
+    let updated: Lead[];
 
-    if (favorites.find((f: Lead) => f.name === lead.name)) {
-      updated = favorites.filter((f: Lead) => f.name !== lead.name);
+    if (favorites.find((f) => f.name === lead.name)) {
+      updated = favorites.filter((f) => f.name !== lead.name);
     } else {
       updated = [...favorites, lead];
     }
 
     setFavorites(updated);
-    localStorage.setItem("favorites", JSON.stringify(updated));
+
+    // persiste no Supabase
+    try {
+      if (!userId) return;
+      const { setFavorites } = await import("../lib/searchStorage");
+      await setFavorites(userId, updated);
+    } catch (e) {
+      console.error("Erro ao salvar favoritos:", e);
+    }
   };
 
   const formatPhone = (phone: string) => {
