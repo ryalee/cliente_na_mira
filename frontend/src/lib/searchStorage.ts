@@ -169,7 +169,7 @@ export async function upsertSearchHistory(opts: {
 
   const updated = [newRow, ...current]
     // evita crescimento infinito por query duplicada recente (opcional)
-    .filter((row, idx) => {
+    .filter((_row, idx) => {
       if (idx > 200) return false;
       return true;
     });
