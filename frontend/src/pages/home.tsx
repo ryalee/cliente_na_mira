@@ -21,7 +21,7 @@ export default function Home() {
     if (!user) return;
 
     const checkProfile = async () => {
-      const res = await fetch(`http://localhost:3000/profile/${user.id}`);
+      const res = await fetch(`https://cliente-na-mira-backend.onrender.com/profile/${user.id}`);
       const data = await res.json();
 
       if (!data || Object.keys(data).length === 0) {
@@ -34,7 +34,7 @@ export default function Home() {
 
   // 🔌 SOCKET (CORRETO)
   useEffect(() => {
-    const socket = io("http://localhost:3000");
+    const socket = io("https://cliente-na-mira-backend.onrender.com");
 
     socket.on("log", (msg) => {
       setLogs((prev) => [...prev, msg]);
