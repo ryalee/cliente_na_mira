@@ -81,7 +81,7 @@ export default function Home() {
     setLogs([]);
 
     try {
-      const response = await fetch("http://localhost:3000/leads", {
+      const response = await fetch("https://cliente-na-mira-backend.onrender.com/leads", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
